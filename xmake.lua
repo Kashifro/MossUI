@@ -1,0 +1,15 @@
+add_rules("mode.debug", "mode.release")
+
+target("MossUI")
+    set_kind("static")
+    set_languages("c++20")
+    add_includedirs("src", {public = true})
+    add_headerfiles("src/MossUI/**.hpp")
+    add_files("src/MossUI/**.cpp")
+
+target("MossUI.Tests")
+    set_kind("binary")
+    set_languages("c++20")
+    add_deps("MossUI")
+    add_includedirs("src")
+    add_files("tests/MossUITests.cpp")

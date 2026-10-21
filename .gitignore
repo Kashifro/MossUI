@@ -1,0 +1,8 @@
+/build/
+/install/
+CMakeUserPresets.json
+.vs/
+.idea/
+*.user
+*.suo
+inf.md
