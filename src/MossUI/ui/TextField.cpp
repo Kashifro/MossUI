@@ -74,9 +74,9 @@ void TextKey(TextFieldState& f, int key) {
         const int a = std::min(f.caret, f.anchor), b = std::max(f.caret, f.anchor);
         switch (key) {
             case 'A' : SelectAll(f); return;
-            case 'C' : if (HasSel(f)) S().backend->ClipboardSet(f.text.substr(static_cast<size_t>(a), static_cast<size_t>(b - a))); return;
-            case 'X' : if (HasSel(f)) { S().backend->ClipboardSet(f.text.substr(static_cast<size_t>(a), static_cast<size_t>(b - a))); DeleteSel(f); } return;
-            case 'V' : InsertText(f, S().backend->ClipboardGet()); return;
+            case 'C' : if (HasSel(f)) S().host->ClipboardSet(f.text.substr(static_cast<size_t>(a), static_cast<size_t>(b - a))); return;
+            case 'X' : if (HasSel(f)) { S().host->ClipboardSet(f.text.substr(static_cast<size_t>(a), static_cast<size_t>(b - a))); DeleteSel(f); } return;
+            case 'V' : InsertText(f, S().host->ClipboardGet()); return;
             default : break;
         }
     }

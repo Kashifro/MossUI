@@ -132,7 +132,7 @@ void ColorOptionWidget::Apply(UI& ui) {
 
 bool ColorOptionWidget::OnNavKey(int vk) {
     if (CtrlHeld() && vk == Key(KeyCode::V) && detail::S().backend) {
-        const int parsed = ParseHexColor(detail::S().backend->ClipboardGet());
+        const int parsed = ParseHexColor(detail::S().host->ClipboardGet());
         if (parsed >= 0) {
             lastRgb = -1;
             if (set) set(parsed);
@@ -144,7 +144,7 @@ bool ColorOptionWidget::OnNavKey(int vk) {
         Sync();
         char hex[16];
         std::snprintf(hex, sizeof(hex), "#%06X", lastRgb < 0 ? 0 : lastRgb);
-        detail::S().backend->ClipboardSet(hex);
+        detail::S().host->ClipboardSet(hex);
         return true;
     }
     if (vk != Key(KeyCode::LEFT) && vk != Key(KeyCode::RIGHT)) return false;

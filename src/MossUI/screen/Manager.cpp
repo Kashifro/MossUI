@@ -4,6 +4,7 @@
 #include "MossUI/core/State.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <vector>
 
 namespace MossUI {
@@ -35,20 +36,27 @@ void SetFocus(std::shared_ptr<Widget> w) {
 void CollectFocusable(const std::shared_ptr<Widget>& widget, std::vector<std::shared_ptr<Widget>>& result) {
     if (!widget || !widget->visible) return;
     if (widget->CanFocus()) result.push_back(widget);
-    if (auto container = std::dynamic_pointer_cast<Container>(widget))
+    if (auto* container = widget->AsContainer())
         for (const auto& child : container->children) CollectFocusable(child, result);
 }
 
-std::shared_ptr<Container> FocusScopeContaining(const std::shared_ptr<Widget>& widget,
-                                                const std::shared_ptr<Widget>& target,
-                                                std::shared_ptr<Container> current = {}) {
-    if (!widget || !widget->visible) return {};
-    auto container = std::dynamic_pointer_cast<Container>(widget);
+// The innermost focus scope containing `target`, or null when it is in no scope.
+Container* FocusScopeContaining(const std::shared_ptr<Widget>& widget, const Widget* target, Container* current) {
+    if (!widget || !widget->visible) return nullptr;
+    Container* container = widget->AsContainer();
     if (container && container->focusScope) current = container;
-    if (widget == target) return current;
-    if (container) for (const auto& child : container->children)
-        if (auto scope = FocusScopeContaining(child, target, current)) return scope;
-    return {};
+    if (widget.get() == target) return current;
+    if (container)
+        for (const auto& child : container->children)
+            if (auto* scope = FocusScopeContaining(child, target, current)) return scope;
+    return nullptr;
+}
+
+Container* FocusScopeIn(Container& root, const Widget* target) {
+    Container* current = root.focusScope ? &root : nullptr;
+    for (const auto& child : root.children)
+        if (auto* scope = FocusScopeContaining(child, target, current)) return scope;
+    return nullptr;
 }
 
 void CycleFocus(bool backwards) {
@@ -59,9 +67,10 @@ void CycleFocus(bool backwards) {
         return;
     }
     std::vector<std::shared_ptr<Widget>> focusable;
-    const auto scope = FocusScopeContaining(std::make_shared<Container>(screen->root), M.focus);
-    if (scope) CollectFocusable(scope, focusable);
-    else for (const auto& child : screen->root.children) CollectFocusable(child, focusable);
+    Container* scope = FocusScopeIn(screen->root, M.focus.get());
+    if (!scope) scope = &screen->root;
+    if (scope != &screen->root && scope->CanFocus()) focusable.push_back(scope->shared_from_this());
+    for (const auto& child : scope->children) CollectFocusable(child, focusable);
     if (focusable.empty()) {
         SetFocus(nullptr);
         return;
@@ -253,6 +262,21 @@ bool OnMouse(int button, int data, int rawX, int rawY) {
         }
     }
     return true;
+}
+
+void RenderOverlay(float w, float h, const std::function<void(UI&)>& draw) {
+    if (w <= 0 || h <= 0 || !draw) return;
+    auto& s = S();
+    const bool hadMouse = s.hasMouse;
+    Measure(w, h);
+    s.hasMouse = false;   // an overlay is not interactive: nothing hovers
+    s.hoverBlocked = false;
+    s.texts.clear();
+    s.tip.clear();
+    UI ui;
+    draw(ui);
+    detail::FlushText();
+    s.hasMouse = hadMouse;
 }
 
 void Render(float w, float h) {

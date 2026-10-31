@@ -1,10 +1,12 @@
 #include "MossUI/MossUI.hpp"
+#include "MossUI/core/State.hpp"
 #include "MossUI/testing/TestBackend.hpp"
 
 #include <cassert>
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <string>
 #include <thread>
 
 namespace {
@@ -141,6 +143,7 @@ public:
 };
 
 void Click(int x, int y) {
+    OnMouse(0, 0, x, y);   // a click lands where the pointer last moved to
     OnMouse(1, 1, x, y);
     OnMouse(1, 0, x, y);
 }
@@ -205,6 +208,7 @@ void TestButtonTextFitsBounds() {
     UI ui;
     const Rect button{20, 90, 30, 52};
     ui.DrawButton(button, "A very long button label that must stay inside its bounds", true, false, false);
+    detail::FlushText();   // text is queued until flushed
     assert(backend.texts.size() == 1);
     const TextRun& text = backend.texts.front();
     assert(ui.TextWidth(text.text) <= button.x1 - button.x0 - 8.0f);
@@ -474,7 +478,7 @@ void TestScreenStackAndNewOptions() {
     int colorVal = 0x112233;
     ColorOptionWidget colorOpt("Tint", [&] { return colorVal; }, [&](int v) { colorVal = v; });
     colorOpt.bounds = {0, 300, 0, 104};
-    backend.clipboard = "#FF8800";
+    host.clipboard = "#FF8800";
     OnKey(Key(KeyCode::V), true, false, true, false);
     colorOpt.OnNavKey(Key(KeyCode::V));
     assert(colorVal == 0xFF8800);
@@ -483,15 +487,23 @@ void TestScreenStackAndNewOptions() {
 
 }
 
-int main() {
-    TestLayoutAndAccessibility();
-    TestModalBlocksHover();
-    TestModalInputCapture();
-    TestPopupAndWidgetKeyboardInput();
-    TestScreenStackAndNewOptions();
-    TestButtonTextFitsBounds();
-    TestCanvasPreservesTextPosition();
-    TestConfigurableConfirmationDialog();
-    TestVariableHeightListScrollClampsAtViewport();
-    TestKeyboardFocus();
+int main(int argc, char** argv) {
+    struct Case { const char* name; void (*fn)(); };
+    const Case cases[] = {
+        {"LayoutAndAccessibility", TestLayoutAndAccessibility},
+        {"ModalBlocksHover", TestModalBlocksHover},
+        {"ModalInputCapture", TestModalInputCapture},
+        {"PopupAndWidgetKeyboardInput", TestPopupAndWidgetKeyboardInput},
+        {"ScreenStackAndNewOptions", TestScreenStackAndNewOptions},
+        {"ButtonTextFitsBounds", TestButtonTextFitsBounds},
+        {"CanvasPreservesTextPosition", TestCanvasPreservesTextPosition},
+        {"ConfigurableConfirmationDialog", TestConfigurableConfirmationDialog},
+        {"VariableHeightListScrollClampsAtViewport", TestVariableHeightListScrollClampsAtViewport},
+        {"KeyboardFocus", TestKeyboardFocus},
+    };
+    // `MossUI.Tests <name>` runs one case, so a failing case does not hide the ones after it.
+    for (const Case& c : cases)
+        if (argc > 1 && std::string(argv[1]) == c.name) { c.fn(); return 0; }
+    if (argc > 1) return 2;
+    for (const Case& c : cases) c.fn();
 }

@@ -4,6 +4,7 @@
 #include "MossUI/ui/UI.hpp"
 #include "MossUI/widgets/Widget.hpp"
 
+#include <functional>
 #include <memory>
 
 namespace MossUI {
@@ -41,6 +42,9 @@ enum class NavigationAction { Previous, Next, Up, Down, Left, Right, Accept, Bac
 void OnNavigate(NavigationAction action, bool down = true);
 
 void Render(float width, float height);
+// One-shot, non-interactive drawing on top of the game (HUD overlays): sets up size and text batching, runs `draw`,
+// flushes. Needs the backend to have started its frame, like Render.
+void RenderOverlay(float width, float height, const std::function<void(UI&)>& draw);
 
 void FocusWidget(std::shared_ptr<Widget> w);
 bool ShiftHeld();

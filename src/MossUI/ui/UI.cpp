@@ -3,6 +3,8 @@
 #include "MossUI/core/State.hpp"
 
 #include <algorithm>
+#include <array>
+#include <map>
 #include <system_error>
 
 namespace MossUI {
@@ -58,7 +60,35 @@ Rect Intersect(const Rect& a, const Rect& b) {
 bool HasArea(const Rect& rect) { return rect.x1 > rect.x0 && rect.y1 > rect.y0; }
 }
 
-void SetClipboardText(const std::string& text) { S().backend->ClipboardSet(text); }
+void SetClipboardText(const std::string& text) { if (S().host) S().host->ClipboardSet(text); }
+
+namespace {
+std::map<std::string, SkinDef>& Skins() {
+    static std::map<std::string, SkinDef> skins = {
+        {skin::PANEL, {"textures/ui/dialog_background_opaque", {16, 4, 16, 4}}},
+        {skin::SCROLL_HANDLE, {"textures/ui/ScrollHandle", {3, 1, 5, 2}}},
+        {skin::SLIDER_BUTTON, {"textures/ui/slider_button_default", {6, 2, 6, 2}}},
+        {skin::SLIDER_BUTTON_HOVER, {"textures/ui/slider_button_hover", {6, 2, 6, 2}}},
+    };
+    return skins;
+}
+}
+
+void SetSkin(const std::string& name, SkinDef def) { Skins()[name] = std::move(def); }
+
+const SkinDef* FindSkin(const std::string& name) {
+    const auto it = Skins().find(name);
+    return it == Skins().end() ? nullptr : &it->second;
+}
+
+void ResetSkins() {
+    auto& skins = Skins();
+    skins.clear();
+    skins[skin::PANEL] = {"textures/ui/dialog_background_opaque", {16, 4, 16, 4}};
+    skins[skin::SCROLL_HANDLE] = {"textures/ui/ScrollHandle", {3, 1, 5, 2}};
+    skins[skin::SLIDER_BUTTON] = {"textures/ui/slider_button_default", {6, 2, 6, 2}};
+    skins[skin::SLIDER_BUTTON_HOVER] = {"textures/ui/slider_button_hover", {6, 2, 6, 2}};
+}
 
 void SetAssetDir(std::filesystem::path dir) {
     S().assetDir = std::move(dir);
@@ -112,7 +142,7 @@ void UI::Outline(const Rect& r, const Color& c, float alpha) {
 void UI::Backdrop(float alpha) { Fill({0, S().w, 0, S().h}, col::DIM, alpha); }
 
 void UI::Panel(const Rect& r) {
-    if (S().backend->Skinned(r, Skin::Panel)) return;
+    if (Skinned(r, skin::PANEL)) return;
     Fill(r, CurrentTheme().panel, 0.95f);
     Outline(r, CurrentTheme().border);
 }
@@ -133,7 +163,27 @@ void UI::PopClip() {
     state.clips.pop_back();
 }
 
-bool UI::Image(const Rect& r, const std::string& path) { return S().backend->Image(r, path); }
+bool UI::Image(const Rect& r, const std::string& path, const Color& tint) {
+    Backend* b = S().backend;
+    if (!b->Quad(r, path, Uv{})) return false;
+    b->FlushQuads(tint);
+    return true;
+}
+
+bool UI::NineSlice(const Rect& r, const std::string& path, const Slice& slice, const Color& tint) {
+    Backend* b = S().backend;
+    std::array<QuadSpec, 9> quads;
+    const int n = NineSliceQuads(r, slice, quads);
+    for (int i = 0; i < n; ++i)
+        if (!b->Quad(quads[static_cast<size_t>(i)].dst, path, quads[static_cast<size_t>(i)].uv)) return false;   // all nine share one texture
+    b->FlushQuads(tint);
+    return true;
+}
+
+bool UI::Skinned(const Rect& r, const std::string& skinName, const Color& tint) {
+    const SkinDef* def = FindSkin(skinName);
+    return def && NineSlice(r, def->path, def->slice, tint);
+}
 
 bool UI::DrawGlyph(Rect r, const std::string& name, bool enabled, bool hov, bool down) {
     const char* state = !enabled ? "" : down ? "_pressed" : hov ? "_hover" : "";
@@ -147,8 +197,18 @@ bool UI::DrawGlyph(Rect r, const std::string& name, bool enabled, bool hov, bool
 
 void UI::Preload(const std::string& path) { S().backend->Preload(path); }
 
-bool UI::ImageTiled(const Rect& r, const std::string& path, float tile) {
-    return S().backend->ImageTiled(r, path, tile);
+bool UI::ImageTiled(const Rect& r, const std::string& path, float tile, const Color& tint) {
+    if (tile <= 0.0f) return false;
+    Backend* b = S().backend;
+    for (float y = r.y0; y < r.y1; y += tile) {
+        const float h = std::min(tile, r.y1 - y);
+        for (float x = r.x0; x < r.x1; x += tile) {
+            const float w = std::min(tile, r.x1 - x);
+            if (!b->Quad({x, x + w, y, y + h}, path, Uv{0, 0, w / tile, h / tile})) return false;
+        }
+        b->FlushQuads(tint);   // one flush per row keeps the batch small
+    }
+    return true;
 }
 
 void UI::Text(float x0, float x1, float y, const std::string& s, const Color& c, Align align, float alpha, bool shadow) {

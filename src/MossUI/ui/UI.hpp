@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MossUI/core/Backend.hpp"
+#include "MossUI/core/NineSlice.hpp"
 #include "MossUI/core/Types.hpp"
 
 #include <algorithm>
@@ -11,6 +13,19 @@
 namespace MossUI {
 
 void SetClipboardText(const std::string& text);
+
+// A named nine-slice texture. Widgets look skins up by name, so a mod (or a resource pack's loader) can restyle the UI
+// with SetSkin(skin::PANEL, {...}) without touching a backend.
+struct SkinDef { std::string path; Slice slice; };
+namespace skin {
+inline constexpr const char* PANEL = "panel";
+inline constexpr const char* SCROLL_HANDLE = "scroll_handle";
+inline constexpr const char* SLIDER_BUTTON = "slider_button";
+inline constexpr const char* SLIDER_BUTTON_HOVER = "slider_button_hover";
+}
+void SetSkin(const std::string& name, SkinDef def);
+const SkinDef* FindSkin(const std::string& name);
+void ResetSkins();
 void SetAssetDir(std::filesystem::path dir);
 std::string AssetPath(const std::string& name);
 
@@ -95,10 +110,12 @@ public:
     void Panel(const Rect& r);
     void PushClip(const Rect& r);
     void PopClip();
-    bool Image(const Rect& r, const std::string& path);
+    bool Image(const Rect& r, const std::string& path, const Color& tint = col::WHITE);
     bool DrawGlyph(Rect r, const std::string& name, bool enabled, bool hov, bool down);
     void Preload(const std::string& path);
-    bool ImageTiled(const Rect& r, const std::string& path, float tile = 32.0f);
+    bool ImageTiled(const Rect& r, const std::string& path, float tile = 32.0f, const Color& tint = col::WHITE);
+    bool NineSlice(const Rect& r, const std::string& path, const Slice& slice, const Color& tint = col::WHITE);
+    bool Skinned(const Rect& r, const std::string& skinName, const Color& tint = col::WHITE);
     void Text(float x0, float x1, float y, const std::string& s, const Color& c, Align align, float alpha = 0.9f,
               bool shadow = true);
     void LinkText(float x, float maxX, float y, const std::string& text, const Color& color, bool hovered, bool pressed);

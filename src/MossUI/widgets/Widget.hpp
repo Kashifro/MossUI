@@ -26,6 +26,8 @@ public:
     Widget& Accessible(std::string name, std::string description = {}) {
         accessibleName = std::move(name); accessibleDescription = std::move(description); return *this;
     }
+    // Lets the screen manager walk containers without RTTI (dynamic_cast), so mods can build with -fno-rtti.
+    virtual class Container* AsContainer() { return nullptr; }
     virtual AccessibleRole Role() const { return AccessibleRole::Generic; }
     virtual std::string AccessibleValue() const { return {}; }
     virtual bool Disabled() const { return false; }
@@ -61,6 +63,7 @@ public:
 class Container : public Widget {
 public:
     bool focusScope = false;
+    Container* AsContainer() override { return this; }
     template <typename T, typename... Args>
     T& Add(Args&&... args) {
         auto p = std::make_shared<T>(std::forward<Args>(args)...);

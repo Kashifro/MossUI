@@ -96,7 +96,7 @@ void UI::DrawSlider(const Rect& area, float value, float lo, float hi, float ste
             Fill({nx, nx + 1, track.y0 + 1, track.y1 - 1}, frame);
         }
     const Rect hr{hx - hw * 0.5f, hx + hw * 0.5f, cy - 8, cy + 8};
-    if (!S().backend->Skinned(hr, hov ? Skin::SliderButtonHover : Skin::SliderButton)) {
+    if (!Skinned(hr, hov ? skin::SLIDER_BUTTON_HOVER : skin::SLIDER_BUTTON)) {
         Fill(hr, frame);
         Fill({hr.x0 + 1, hr.x1 - 1, hr.y0 + 1, hr.y1 - 1}, theme.sliderThumb);
     }
@@ -122,7 +122,7 @@ void UI::DrawScrollbar(ScrollState& sc, const Rect& rail, int visible, int total
     const float hy = sc.rail.y0 + (railH - sc.handleH) * visualPos / static_cast<float>(sc.max);
     Fill(sc.rail, col::LINE);
     const Rect hr{sc.rail.x0, sc.rail.x1, hy, hy + sc.handleH};
-    if (!S().backend->Skinned(hr, Skin::ScrollHandle)) Fill(hr, col::WHITE, 0.9f);
+    if (!Skinned(hr, skin::SCROLL_HANDLE)) Fill(hr, col::WHITE, 0.9f);
 }
 
 }

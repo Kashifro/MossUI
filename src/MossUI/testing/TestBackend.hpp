@@ -16,9 +16,12 @@ public:
     };
 
     void Fill(const Rect& rect, const Color& color, float alpha) override { fills.push_back({rect, color, alpha}); }
-    bool Image(const Rect&, const std::string& path) override { return availableImages.contains(path); }
-    bool ImageTiled(const Rect&, const std::string& path, float) override { return availableImages.contains(path); }
-    bool Skinned(const Rect&, Skin) override { return false; }
+    bool Quad(const Rect& rect, const std::string& path, const Uv& uv) override {
+        if (!availableImages.contains(path)) return false;
+        quads.push_back({rect, path, uv});
+        return true;
+    }
+    void FlushQuads(const Color& tint) override { flushes.push_back(tint); }
     void PushClip(const Rect& rect) override {
         ++clipDepth;
         clipRects.push_back(rect);
@@ -32,17 +35,22 @@ public:
     }
     void FlushText() override {}
     float TextWidth(const std::string& text) override { return static_cast<float>(text.size()) * 6.0f; }
-    std::string ClipboardGet() override { return clipboard; }
-    void ClipboardSet(const std::string& value) override { clipboard = value; }
+
+    struct QuadCall {
+        Rect rect;
+        std::string path;
+        Uv uv;
+    };
 
     std::vector<FillCall> fills;
+    std::vector<QuadCall> quads;
+    std::vector<Color> flushes;
     std::vector<TextRun> texts;
     std::vector<Rect> clipRects;
     std::vector<int> textClipDepths;
     std::vector<Rect> textClipRects;
     std::vector<Rect> activeClips;
     std::set<std::string> availableImages;
-    std::string clipboard;
     int clipDepth = 0;
 };
 
@@ -58,8 +66,13 @@ public:
     void ReleaseMouse() override {}
     bool MouseGrabbed() override { return false; }
     void Click() override { ++clicks; }
+    std::string ClipboardGet() override { return clipboard; }
+    void ClipboardSet(const std::string& value) override { clipboard = value; }
+    void OpenUri(const std::string& uri) override { opened.push_back(uri); }
 
     int clicks = 0;
+    std::string clipboard;
+    std::vector<std::string> opened;
 };
 
 }
