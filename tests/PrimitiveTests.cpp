@@ -1,4 +1,8 @@
 // Tests for the shared drawing primitives, render backend, typed settings and Box layout.
+
+// A game declares its own global ::Container; MossUI::Container / AsContainer() must not bind to it.
+class Container {};
+
 #include "MossUI/MossUI.hpp"
 #include "MossUI/core/State.hpp"
 #include "MossUI/testing/TestBackend.hpp"

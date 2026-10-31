@@ -11,6 +11,8 @@
 
 namespace MossUI {
 
+class Container;   // declared here, not via "class Container*" below: that would bind to a game's global ::Container
+
 class Widget : public std::enable_shared_from_this<Widget> {
 public:
     virtual ~Widget() = default;
@@ -27,7 +29,7 @@ public:
         accessibleName = std::move(name); accessibleDescription = std::move(description); return *this;
     }
     // Lets the screen manager walk containers without RTTI (dynamic_cast), so mods can build with -fno-rtti.
-    virtual class Container* AsContainer() { return nullptr; }
+    virtual Container* AsContainer() { return nullptr; }
     virtual AccessibleRole Role() const { return AccessibleRole::Generic; }
     virtual std::string AccessibleValue() const { return {}; }
     virtual bool Disabled() const { return false; }
